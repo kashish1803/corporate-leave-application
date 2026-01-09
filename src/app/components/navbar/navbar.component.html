@@ -1,0 +1,83 @@
+<nav class="navbar navbar-expand-lg navbar-absolute fixed-top">
+    <div class="container-fluid">
+        
+        <div class="navbar-wrapper">
+          <span class="navbar-brand font-weight-bold d-none d-md-block" style="color: #333; font-size: 18px;">
+              {{ getTitle() }}
+          </span>
+        </div>
+
+        <div class="d-none d-md-flex justify-content-center align-items-center view-switcher" *ngIf="isUserAdmin">
+            <div class="btn-group shadow-sm" role="group">
+                <button type="button" class="btn btn-sm view-btn" 
+                        [class.active]="currentView === 'EMPLOYEE'" 
+                        (click)="switchView('EMPLOYEE')">
+                    <i class="material-icons">person</i> Employee
+                </button>
+                <button type="button" class="btn btn-sm view-btn" 
+                        [class.active]="currentView === 'MANAGER'" 
+                        (click)="switchView('MANAGER')">
+                    <i class="material-icons">people</i> Manager
+                </button>
+                <button type="button" class="btn btn-sm view-btn" 
+                        [class.active]="currentView === 'ADMIN'" 
+                        (click)="switchView('ADMIN')">
+                    <i class="material-icons">admin_panel_settings</i> Admin
+                </button>
+            </div>
+        </div>
+
+        <button mat-raised-button class="navbar-toggler" type="button" (click)="sidebarToggle()">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navigation">
+            <ul class="navbar-nav align-items-center">
+                
+                <li class="nav-item dropdown profile-dropdown">
+                    <a class="nav-link d-flex align-items-center" href="javascript:void(0)" id="navbarDropdownProfile" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <div class="profile-photo-small mr-2">
+                           <span>{{ userProfile.name.charAt(0) }}</span>
+                        </div>
+                        <span class="d-none d-md-block font-weight-500 text-dark">{{ userProfile.name }}</span>
+                        <i class="material-icons ml-1 text-muted">arrow_drop_down</i>
+                    </a>
+                    
+                    <div class="dropdown-menu dropdown-menu-right shadow-lg border-0 mt-2" aria-labelledby="navbarDropdownProfile">
+                        
+                        <div class="dropdown-header text-center pt-3 pb-2">
+                            <div class="profile-photo-large mx-auto mb-2">
+                                {{ userProfile.name.charAt(0) }}
+                            </div>
+                            <h6 class="mb-0 text-dark font-weight-bold">{{ userProfile.name }}</h6>
+                            <small class="text-muted">{{ userProfile.empId }}</small>
+                        </div>
+                        
+                        <div class="dropdown-divider mx-3"></div>
+                        
+                        <div class="px-4 py-2">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="material-icons text-info mr-2" style="font-size: 18px;">work</i>
+                                <div>
+                                    <small class="d-block text-muted line-height-1">Project</small>
+                                    <span class="text-dark font-weight-500" style="font-size: 13px;">{{ userProfile.projectName }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="material-icons text-warning mr-2" style="font-size: 18px;">supervisor_account</i>
+                                <div>
+                                    <small class="d-block text-muted line-height-1">Manager</small>
+                                    <span class="text-dark font-weight-500" style="font-size: 13px;">{{ userProfile.managerName }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

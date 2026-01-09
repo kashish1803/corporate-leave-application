@@ -1,0 +1,64 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row">
+      
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header card-header-primary">
+            <h4 class="card-title">Apply for Leave</h4>
+            <p class="card-category">Select type first to see date options</p>
+          </div>
+          <div class="card-body">
+            <form>
+              
+              <div class="row">
+                <div class="col-md-12">
+                  <mat-form-field class="example-full-width">
+                    <mat-select placeholder="Select Leave Type" [(ngModel)]="leaveData.type" name="type">
+                      <mat-option value="Full Day">Full Day</mat-option>
+                      <mat-option value="Half Day">Half Day</mat-option>
+                      <mat-option value="Optional Holiday">Optional Holiday</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="row" *ngIf="leaveData.type === 'Full Day'">
+                <div class="col-md-6">
+                  <mat-form-field class="example-full-width">
+                    <input matInput type="date" placeholder="From Date" [(ngModel)]="leaveData.fromDate" name="fromDate">
+                  </mat-form-field>
+                </div>
+                <div class="col-md-6">
+                  <mat-form-field class="example-full-width">
+                    <input matInput type="date" placeholder="To Date" [(ngModel)]="leaveData.toDate" name="toDate">
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="row" *ngIf="leaveData.type && leaveData.type !== 'Full Day'">
+                <div class="col-md-12">
+                  <mat-form-field class="example-full-width">
+                    <input matInput type="date" placeholder="Select Date" [(ngModel)]="leaveData.singleDate" name="singleDate">
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <mat-form-field class="example-full-width">
+                    <textarea matInput placeholder="Reason" [(ngModel)]="leaveData.reason" name="reason" rows="3"></textarea>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <button mat-raised-button type="button" class="btn btn-primary pull-right" (click)="submitLeave()">Submit Application</button>
+              <div class="clearfix"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      </div>
+  </div>
+</div>

@@ -1,0 +1,213 @@
+<div class="main-content">
+  <div class="container-fluid">
+    
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-5">
+            <div class="input-group no-border" style="max-width: 400px;">
+                <input type="text" class="form-control" placeholder="Search (Name, ID, Project...)" 
+                       [(ngModel)]="searchText" (keyup)="onSearch()">
+                <button mat-raised-button class="btn btn-white btn-round btn-just-icon" (click)="onSearch()">
+                    <i class="material-icons">search</i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="col-md-7 text-right">
+            <button mat-raised-button class="btn btn-warning mr-3" (click)="openProjectModal()">
+                <i class="material-icons">work</i> Create Project
+            </button>
+            <button mat-raised-button class="btn btn-info" (click)="openAddModal()">
+                <i class="material-icons">person_add</i> Add New User
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">Employee Management</h4>
+                    <p class="card-category">Manage system users and assignments</p>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <thead class="text-primary">
+                            <th>Emp ID</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Project</th>
+                            <th>Manager</th>
+                            <th class="text-right">Actions</th>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let user of displayedUsers">
+                                <td>{{ user.empCode }}</td>
+                                <td style="font-weight: 500;">{{ user.name }}</td>
+                                <td>
+                                    <span class="badge" [ngClass]="{
+                                        'badge-danger': user.role === 'admin',
+                                        'badge-warning': user.role === 'manager',
+                                        'badge-info': user.role === 'employee'
+                                    }">
+                                        {{ user.role | titlecase }}
+                                    </span>
+                                </td>
+                                <td>{{ getProjectName(user.projectId) }}</td>
+                                <td>{{ getManagerName(user.managerId) }}</td>
+                                <td class="td-actions text-right">
+                                    <button mat-raised-button class="btn btn-primary btn-link btn-sm btn-just-icon" 
+                                            (click)="editUser(user)" matTooltip="Edit">
+                                            <i class="material-icons">edit</i>
+                                    </button>
+                                    <button mat-raised-button class="btn btn-danger btn-link btn-sm btn-just-icon" 
+                                            (click)="deleteUser(user)" matTooltip="Delete">
+                                            <i class="material-icons">close</i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr *ngIf="displayedUsers.length === 0">
+                                <td colspan="6" class="text-center text-muted py-3">No employees found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" *ngIf="showModal">
+        <div class="card modal-card">
+            <div class="modal-header-custom">
+                <h4 class="modal-title">{{ isEdit ? 'Edit User' : 'Add New User' }}</h4>
+                <p class="modal-subtitle">Complete the employee profile</p>
+            </div>
+            <div class="card-body" style="padding: 20px;">
+                <form>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <mat-form-field class="w-100">
+                                <input matInput placeholder="Emp ID *" [(ngModel)]="formData.empCode" name="code" required>
+                            </mat-form-field>
+                        </div>
+                        <div class="col-md-4">
+                            <mat-form-field class="w-100">
+                                <input matInput placeholder="First Name *" [(ngModel)]="formData.firstName" name="fname" required>
+                            </mat-form-field>
+                        </div>
+                        <div class="col-md-4">
+                            <mat-form-field class="w-100">
+                                <input matInput placeholder="Last Name *" [(ngModel)]="formData.lastName" name="lname" required>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                         <div class="col-md-8">
+                            <mat-form-field class="w-100">
+                                <input matInput type="email" placeholder="Email Address" [(ngModel)]="formData.projectMailId" name="email">
+                            </mat-form-field>
+                        </div>
+                        <div class="col-md-4">
+                            <mat-form-field class="w-100">
+                                <mat-label>Joining Date</mat-label>
+                                <input matInput type="date" [(ngModel)]="formData.joiningDate" name="jdate">
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <label class="d-block text-muted mb-2" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Role Assignment</label>
+                            <mat-radio-group [(ngModel)]="formData.role" name="roleGroup" class="d-flex align-items-center">
+                                <mat-radio-button value="employee" class="mr-4 text-info">Employee</mat-radio-button>
+                                <mat-radio-button value="manager" class="mr-4 text-warning">Manager</mat-radio-button>
+                                <mat-radio-button value="admin" class="text-danger">Admin</mat-radio-button>
+                            </mat-radio-group>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <mat-form-field class="w-100">
+                                <mat-label>Assign Manager</mat-label>
+                                <mat-select [(ngModel)]="formData.managerId" name="mgr" panelClass="modal-select-panel">
+                                    <mat-option [value]="null">-- None --</mat-option>
+                                    <mat-option *ngFor="let m of managers" [value]="m.id">{{ m.name }}</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        <div class="col-md-6">
+                            <mat-form-field class="w-100">
+                                <mat-label>Project ID</mat-label>
+                                <mat-select [(ngModel)]="formData.projectId" name="prj" panelClass="modal-select-panel">
+                                    <mat-option [value]="null">-- None --</mat-option>
+                                    <mat-option *ngFor="let p of projects" [value]="p.id">{{ p.name }} (ID: {{p.id}})</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-right">
+                        <button mat-button class="btn btn-default mr-2" (click)="showModal = false">Cancel</button>
+                        <button mat-raised-button class="btn btn-info" (click)="saveUser()">
+                            {{ isEdit ? 'Update' : 'Save User' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="modal-backdrop" (click)="showModal = false"></div>
+    </div>
+
+    <div class="modal-overlay" *ngIf="showProjectModal">
+        <div class="card modal-card" style="width: 500px;"> 
+            <div class="modal-header-custom" style="background: linear-gradient(60deg, #ffa726, #fb8c00); box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(255, 152, 0, 0.4);">
+                <h4 class="modal-title">Create New Project</h4>
+                <p class="modal-subtitle">Add a project to the system</p>
+            </div>
+
+            <div class="card-body" style="padding: 30px 20px;">
+                <form>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <mat-form-field class="w-100">
+                                <input matInput placeholder="Project Name *" [(ngModel)]="projectData.name" name="prjName" required>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <mat-form-field class="w-100">
+                                <input matInput type="text" placeholder="Project ID *" [(ngModel)]="projectData.id" name="prjId" required>
+                                <mat-hint>Unique ID (e.g., 105, AI-01)</mat-hint>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-right">
+                        <button mat-button class="btn btn-default mr-2" (click)="showProjectModal = false">Cancel</button>
+                        <button mat-raised-button class="btn btn-warning" (click)="saveProject()">
+                            Save Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="modal-backdrop" (click)="showProjectModal = false"></div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 900; display: flex; justify-content: center; align-items: center; }
+.modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 901; }
+.modal-card { position: relative; z-index: 902; width: 700px; max-width: 95%; max-height: 90vh; overflow-y: auto; margin: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-radius: 6px; background: white;}
+.modal-header-custom { background: linear-gradient(60deg, #26c6da, #00acc1); padding: 20px; border-top-left-radius: 6px; border-top-right-radius: 6px; color: white; box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(0, 188, 212, 0.4); }
+.modal-title { margin: 0; font-weight: 300; font-size: 20px; }
+.modal-subtitle { margin: 0; opacity: 0.8; font-size: 13px; margin-top: 5px; }
+::ng-deep .cdk-overlay-container { z-index: 1050 !important; }
+/* Radio Button Spacing */
+.mat-radio-button { margin-right: 20px; }
+</style>

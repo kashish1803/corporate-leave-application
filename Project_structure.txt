@@ -1,0 +1,48 @@
+app
+-components
+-->calendar(.css, .html, .ts)
+-->footer(.css, .html, .ts)
+-->navbar(.css, .html, .ts)
+-->sidebar(.css, .html, .ts)
+-->components.module.ts
+
+-dashboard(.css, .html, .ts, .spec.ts)
+
+-guards
+-->auth.guard.ts
+-->role.guard.ts
+
+-interceptors
+-->auth.interceptors.ts
+
+-layouts\admin-layout
+-->AdminCalendarComponent
+-->AdminUsersComponent
+-->AdminViewComponent
+-->admin-layout.component.ts
+-->admin-layout.module.ts
+-->admin-layout.routing.ts
+
+-login(.css, .html, .ts)
+
+-my-team(.css, .html, .ts, .spec.ts)
+
+-services
+-->attendance.service.ts
+-->auth.service.ts
+-->timesheet.service.ts
+
+-table-list(.css, .html, .ts, .spec.ts)
+
+-user-profile(.css, .html, .ts, .spec.ts)
+
+-app.component.html
+-app.component.ts
+-app.component.css
+-app.module.ts
+-app.routing.ts
+
+
+==========================================
+
+

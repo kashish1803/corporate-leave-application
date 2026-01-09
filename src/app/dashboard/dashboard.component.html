@@ -1,0 +1,106 @@
+<div class="main-content">
+  <div class="container-fluid">
+     
+      <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-warning">
+                    <h4 class="card-title">Auto-Upload Timesheet</h4>
+                    <p class="card-category">Upload a screenshot of your schedule. AI will detect absences.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="timesheetInput" class="btn btn-default btn-round mat-raised-button">
+                                    <i class="material-icons">attach_file</i> Choose Screenshot
+                                </label>
+                                <input type="file" id="timesheetInput" (change)="onFileSelected($event)" accept="image/*" style="display: none;">
+                                
+                                <span class="ml-3 font-weight-bold" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+                                <span class="ml-3 text-muted" *ngIf="!selectedFile">No file selected</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 text-right">
+                            <button mat-raised-button class="btn btn-warning" 
+                                    (click)="uploadTimesheet()" 
+                                    [disabled]="!selectedFile || isScanning">
+                                <span *ngIf="isScanning" class="spinner-border spinner-border-sm mr-1"></span>
+                                <i class="material-icons" *ngIf="!isScanning">cloud_upload</i> 
+                                {{ isScanning ? 'Processing...' : 'Scan & Update' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3" *ngIf="scanMessage">
+                        <div class="col-md-12">
+                            <div class="alert" [ngClass]="scanMessage.includes('Error') ? 'alert-danger' : 'alert-success'" style="padding: 10px 15px; border-radius: 4px;">
+                                <span style="font-size: 14px; font-weight: 500;">{{ scanMessage }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="row pt-3">
+          <div class="col-md-12">
+              <app-calendar [targetEmployee]="currentUser"></app-calendar>
+          </div>
+      </div>
+
+      <div class="row mt-4">
+          <div class="col-md-12">
+              <div class="card">
+                  <div class="card-header card-header-primary">
+                      <h4 class="card-title">My Upcoming Leaves</h4>
+                      <p class="card-category">Future leave requests status</p>
+                  </div>
+                  <div class="card-body table-responsive">
+                      <table class="table table-hover">
+                          <thead class="text-primary">
+                              <th>Date</th>
+                              <th>Type</th>
+                              <th>Status</th>
+                              <th class="text-right">Action</th>
+                          </thead>
+                          <tbody>
+                              <tr *ngFor="let leave of myLeaves">
+                                  <td>{{ leave.date }}</td>
+                                  <td>{{ leave.type }}</td>
+                                  <td>
+                                      <span class="badge" 
+                                          [ngClass]="{
+                                              'badge-success': leave.status === 'Approved', 
+                                              'badge-warning': leave.status === 'Pending',
+                                              'badge-danger': leave.status === 'Rejected'
+                                          }">
+                                          {{ leave.status }}
+                                      </span>
+                                  </td>
+                                  <td class="td-actions text-right">
+                                      <button mat-raised-button type="button" 
+                                              class="btn btn-danger btn-link btn-sm" 
+                                              (click)="withdrawLeave(leave)"
+                                              [disabled]="!canWithdraw(leave.date)"
+                                              matTooltip="Withdraw (> 15 days)">
+                                          <i class="material-icons">close</i>
+                                      </button>
+                                  </td>
+                              </tr>
+                              <tr *ngIf="myLeaves.length === 0">
+                                  <td colspan="4" class="text-center text-muted py-3">No upcoming leaves found.</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+  </div>
+</div>

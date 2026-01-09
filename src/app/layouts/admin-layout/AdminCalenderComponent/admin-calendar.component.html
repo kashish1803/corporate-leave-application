@@ -1,0 +1,66 @@
+<div class="main-content">
+  <div class="container-fluid">
+    
+    <div class="card">
+        <div class="card-header card-header-warning">
+            <h4 class="card-title">Edit Calendar / Add Holidays</h4>
+            <p class="card-category">Add events for Everyone, Specific Projects, or Manager Teams</p>
+        </div>
+        <div class="card-body">
+            
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="mr-3 text-dark font-weight-bold">Apply To:</label>
+                    <mat-radio-group [(ngModel)]="scope">
+                        <mat-radio-button value="Global" class="mr-3">Global (All)</mat-radio-button>
+                        <mat-radio-button value="Project" class="mr-3">Specific Project</mat-radio-button>
+                        <mat-radio-button value="Manager" class="mr-3">Specific Manager</mat-radio-button>
+                    </mat-radio-group>
+                </div>
+
+                <div class="col-md-4" *ngIf="scope !== 'Global'">
+                    <mat-form-field class="w-100">
+                        <mat-select [placeholder]="scope === 'Manager' ? 'Select Manager' : 'Select Project'" [(ngModel)]="targetId">
+                            <ng-container *ngIf="scope === 'Manager'">
+                                <mat-option *ngFor="let m of managers" [value]="m.id">{{ m.name }}</mat-option>
+                            </ng-container>
+                            <ng-container *ngIf="scope === 'Project'">
+                                <mat-option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</mat-option>
+                            </ng-container>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+
+                <div class="col-md-4">
+                    <mat-form-field class="w-100">
+                        <input matInput type="date" placeholder="Event Date" [(ngModel)]="eventDate">
+                    </mat-form-field>
+                </div>
+                <div class="col-md-4">
+                    <mat-form-field class="w-100">
+                        <input matInput placeholder="Event Title (e.g. Diwali)" [(ngModel)]="eventTitle">
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <button class="btn btn-warning pull-right" (click)="saveEvent()">Add Event to Calendar</button>
+
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header"><h4>Recently Added Events</h4></div>
+        <div class="card-body">
+            <table class="table">
+                <th>Date</th><th>Title</th><th>Scope</th>
+                <tr *ngFor="let ev of service.adminEvents">
+                    <td>{{ ev.date }}</td>
+                    <td>{{ ev.title }}</td>
+                    <td>{{ ev.scope }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+  </div>
+</div>

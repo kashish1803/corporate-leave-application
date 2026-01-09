@@ -1,0 +1,19 @@
+.custom-dropdown {
+    width: 120px;
+    height: 35px;
+    background: rgba(255, 255, 255, 0.15); /* Subtle transparent white */
+    border-radius: 4px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Ensure text inside dropdown remains white */
+::ng-deep .custom-dropdown .mat-select-value {
+    color: white !important;
+    font-size: 14px;
+}
+::ng-deep .custom-dropdown .mat-select-arrow {
+    color: white !important;
+}

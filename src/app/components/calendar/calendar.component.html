@@ -1,0 +1,44 @@
+<div class="cal-wrapper">
+  
+  <div class="cal-header">
+    <button mat-icon-button (click)="changeMonth(-1)"><mat-icon>chevron_left</mat-icon></button>
+    <span class="cal-month-label">{{ displayMonth }}</span>
+    <button mat-icon-button (click)="changeMonth(1)"><mat-icon>chevron_right</mat-icon></button>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-day-header" *ngFor="let day of weekDays">{{ day }}</div>
+
+    <div class="cal-cell" *ngFor="let day of calendarDays" 
+         [ngClass]="{'cal-empty': !day.date, 'cal-has-data': day.date}">
+      
+      <div class="cal-date-number" *ngIf="day.date">{{ day.date }}</div>
+
+      <button mat-icon-button [matMenuTriggerFor]="cellMenu" class="cal-menu-btn" 
+              *ngIf="day.date" (click)="stopProp($event)">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px; line-height: 18px;">more_vert</mat-icon>
+      </button>
+
+      <mat-menu #cellMenu="matMenu">
+          <button mat-menu-item (click)="applyLeaveFromCalendar(day.fullDate, 'Full Day')">
+              <mat-icon>event_busy</mat-icon> Full Day Leave
+          </button>
+          <button mat-menu-item (click)="applyLeaveFromCalendar(day.fullDate, 'Half Day')">
+              <mat-icon>schedule</mat-icon> Half Day Leave
+          </button>
+          <button mat-menu-item (click)="applyLeaveFromCalendar(day.fullDate, 'Holiday')">
+              <mat-icon>celebration</mat-icon> Holiday
+          </button>
+
+          <button mat-menu-item (click)="resetLeave(day.fullDate)" *ngIf="day.status && !day.status.includes('Present') && day.status !== 'Weekend'">
+              <mat-icon color="warn">restart_alt</mat-icon> <span class="text-danger">Reset to Default</span>
+          </button>
+      </mat-menu>
+
+      <div class="cal-status-badge" *ngIf="day.status" [ngClass]="day.cssClass">
+          {{ formatStatus(day.status) }}
+      </div>
+      
+    </div>
+  </div>
+</div>
