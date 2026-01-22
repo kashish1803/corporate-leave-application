@@ -3,28 +3,49 @@
     
     <div class="card">
         <div class="card-header card-header-info">
-            <h4 class="card-title">Filter Employees</h4>
+            <h4 class="card-title">Filter & Reports</h4>
+            <p class="card-category">Select a Project, Month, and Year to generate reports.</p>
         </div>
         <div class="card-body">
             <div class="row align-items-center">
                 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <mat-form-field class="w-100">
-                        <mat-select placeholder="Select Project Name" [(ngModel)]="filterValue">
-                            <mat-option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</mat-option>
+                        <mat-label>Select Project (Required)</mat-label>
+                        <mat-select [(ngModel)]="filterValue" (selectionChange)="applyFilter()">
+                            <mat-option [value]="''">-- Show All --</mat-option>
+                            <mat-option *ngFor="let p of projects" [value]="p.projectId">
+                                {{ p.projectName }}
+                            </mat-option>
                         </mat-select>
                     </mat-form-field>
                 </div>
 
-                <div class="col-md-6 text-right">
-                    <button class="btn btn-info mr-2" (click)="applyFilter()">Apply Filter</button>
-                    
-                    <button class="btn btn-primary mr-2" (click)="sendReportToEmail()">
-                        <i class="material-icons">email</i> Send Report
+                <div class="col-md-3">
+                    <mat-form-field class="w-100">
+                        <mat-label>Report Month</mat-label>
+                        <mat-select [(ngModel)]="selectedMonth">
+                            <mat-option *ngFor="let m of months" [value]="m.val">{{ m.name }}</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+
+                <div class="col-md-2">
+                    <mat-form-field class="w-100">
+                        <mat-label>Report Year</mat-label>
+                        <input matInput type="number" [(ngModel)]="selectedYear">
+                    </mat-form-field>
+                </div>
+
+                <div class="col-md-3 text-right">
+                    <button mat-raised-button class="btn btn-primary btn-sm mb-2 w-100" 
+                            (click)="sendReportToEmail()" [disabled]="!filterValue">
+                        <i class="material-icons">email</i> Email Report
                     </button>
 
-                    <button class="btn btn-warning" (click)="downloadReport()">
-                        <i class="material-icons">cloud_download</i> Download Report
+                    <button mat-raised-button class="btn btn-warning btn-sm w-100" 
+                            (click)="downloadReport()" [disabled]="!filterValue">
+                        <i class="material-icons">cloud_download</i> Download CSV
                     </button>
                 </div>
 
@@ -33,10 +54,16 @@
     </div>
 
     <div class="card mt-3">
+        <div class="card-header card-header-primary">
+            <h4 class="card-title">Employee List</h4>
+            <p class="card-category" *ngIf="filterValue">Showing employees for project: {{ getProjectName(filterValue) }}</p>
+            <p class="card-category" *ngIf="!filterValue">Showing all employees</p>
+        </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="text-info">
+                        <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Project</th>
@@ -44,13 +71,16 @@
                     </thead>
                     <tbody>
                         <tr *ngFor="let user of filteredUsers">
-                            <td>{{ user.name }}</td>
+                            <td>{{ user.empCode }}</td>
+                            <td style="font-weight: 500;">{{ user.name }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ getProjectName(user.projectId) }}</td>
-                            <td>{{ getManagerName(user.managerId) }}</td>
+                            <td>{{ getManagerName(user.managerId || user.managerEmployeeId) }}</td>
                         </tr>
                         <tr *ngIf="filteredUsers.length === 0">
-                            <td colspan="4" class="text-center text-muted">No employees found matching the filter.</td>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                No employees found matching the filter.
+                            </td>
                         </tr>
                     </tbody>
                 </table>

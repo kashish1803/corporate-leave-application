@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { AttendanceService, Employee, Project } from '../services/attendance.service';
+import { AttendanceService } from '../services/attendance.service';
+import { HttpClient } from '@angular/common/http';
+
 
 @Component({
   selector: 'app-my-team',
@@ -12,20 +14,15 @@ export class MyTeamComponent implements OnInit {
   // 1. VIEW STATE
   // ==========================================
   activeTab: string = 'calendar'; 
-  selectedEmployee: any = null;   
+  selectedEmployee: any = null; 
+  loading: boolean = true;
+  currentUser: any;
 
   // ==========================================
   // 2. DATA CONTAINERS
   // ==========================================
-  myTeam: Employee[] = [];
-  projects: Project[] = []; 
-  managers: any[] = []; 
-  currentManagerId: number = 1; // Mock Logged-in Manager
-
-  // Stats for "Detail View" (Single Employee Calendar)
-  attendanceStats: any = { present: 0, absent: 0, leaves: 0 };
-  statsDate: Date = new Date();
-  statsMonthLabel: string = '';
+  myTeam: any[] = [];         
+  teamLeaves: any[] = [];     
 
   // ==========================================
   // 3. TEAM CALENDAR VARIABLES
@@ -36,118 +33,139 @@ export class MyTeamComponent implements OnInit {
   weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // ==========================================
-  // 4. MODAL STATES & FORMS
+  // 4. REPORT VARIABLES
   // ==========================================
-  showEditEmployeeModal: boolean = false;   
-  
-  editEmployeeData: any = { 
-    id: null, 
-    name: '', 
-    empCode: '', 
-    email: '', 
-    projectId: null, 
-    managerId: null 
-  };
+  reportMonth: number;
+  reportYear: number;
+  months = [
+    { val: 1, name: 'January' }, { val: 2, name: 'February' }, { val: 3, name: 'March' },
+    { val: 4, name: 'April' }, { val: 5, name: 'May' }, { val: 6, name: 'June' },
+    { val: 7, name: 'July' }, { val: 8, name: 'August' }, { val: 9, name: 'September' },
+    { val: 10, name: 'October' }, { val: 11, name: 'November' }, { val: 12, name: 'December' }
+  ];
 
-  constructor(private service: AttendanceService) { }
+  constructor(
+      private service: AttendanceService,
+      private http: HttpClient 
+  ) { 
+      const today = new Date();
+      this.reportMonth = today.getMonth() + 1;
+      this.reportYear = today.getFullYear();
+  }
 
   ngOnInit() {
-    this.loadData();
-    this.generateTeamCalendar();
+    this.currentUser = this.service.getLoggedUser();
     this.updateMonthLabel(); 
-
+    this.loadData();
+    
     this.service.dataChanged$.subscribe(() => {
         this.loadData();
-        this.generateTeamCalendar(); 
-        if(this.selectedEmployee) {
-            this.refreshStats();
-        }
     });
   }
 
+  // ==========================================
+  // 1. DATA LOADING
+  // ==========================================
   loadData() {
-    this.myTeam = this.service.getTeamByManager(this.currentManagerId);
-    this.projects = this.service.getProjects();
-    this.managers = this.service.getManagers(); 
+    this.loading = true;
+    this.service.getEmployees().subscribe({
+      next: (allEmp: any[]) => {
+        const loggedUser = this.service.getLoggedUser();
+        const myId = (loggedUser?.employeeId || localStorage.getItem('employeeId'))?.toString().trim().toUpperCase();
+
+        if (myId) {
+          this.myTeam = allEmp.filter(emp => {
+            const managerCodeOfEmp = emp.managerEmployeeId?.toString().trim().toUpperCase();
+            return managerCodeOfEmp === myId;
+          });
+        }
+        this.loadLeavesForCalendar();
+      },
+      error: (err) => { this.loading = false; }
+    });
   }
 
-  // ==========================================
-  // 5. EDIT EMPLOYEE LOGIC
-  // ==========================================
-  openEditEmployee(emp: Employee) {
-      this.editEmployeeData = { 
-          id: emp.id,
-          name: emp.name,
-          empCode: emp.empCode,
-          email: emp.email,
-          projectId: emp.projectId,
-          managerId: emp.managerId
-      };
-      this.showEditEmployeeModal = true;
-  }
-
-  saveEmployeeDetails() {
-      // 1. Check for Manager Change (Loss of Access Warning)
-      if (this.editEmployeeData.managerId != this.currentManagerId) {
-          const confirmed = confirm("Warning: If you change the manager, you will no longer be able to view this employee's details. Do you want to proceed?");
-          if (!confirmed) return;
-      }
-
-      // 2. Update Data
-      const originalEmp = this.service.getEmployees().find(e => e.id === this.editEmployeeData.id);
-      
-      if(originalEmp) {
-          const updatedData = {
-              ...originalEmp,
-              projectId: this.editEmployeeData.projectId,
-              managerId: this.editEmployeeData.managerId
-          };
-
-          this.service.updateEmployee(updatedData);
-          this.showEditEmployeeModal = false;
-      }
-  }
-
-  // ==========================================
-  // 6. TEAM CALENDAR LOGIC
-  // ==========================================
-  changeTeamCalendarMonth(offset: number) {
-      this.teamCalendarDate.setMonth(this.teamCalendarDate.getMonth() + offset);
+  loadLeavesForCalendar() {
+    this.service.getAllRequests().subscribe(historyData => {
+      this.teamLeaves = [];
+      historyData.forEach((dto: any) => {
+        this.teamLeaves.push({
+          ...dto,
+          attendanceDate: this.normalizeDate(dto.startDate || dto.attendanceDate),
+          name: dto.employeeName || dto.firstName,
+          status: dto.status?.toUpperCase()
+        });
+      });
       this.generateTeamCalendar();
+      this.loading = false;
+    });
+  }
+
+  // ==========================================
+  // 2. CALENDAR LOGIC (FIXED)
+  // ==========================================
+
+  /**
+   * FIX: Handles switching months and rebuilding the grid
+   * @param delta +1 for next, -1 for previous
+   */
+  changeTeamCalendarMonth(delta: number) {
+    // 1. Update the date object (handles year rollover automatically)
+    this.teamCalendarDate.setMonth(this.teamCalendarDate.getMonth() + delta);
+    
+    // 2. Refresh reference for Angular's change detection (especially for pipes)
+    this.teamCalendarDate = new Date(this.teamCalendarDate);
+    
+    // 3. Re-render the labels and the day grid
+    this.updateMonthLabel();
+    this.generateTeamCalendar();
   }
 
   generateTeamCalendar() {
-      const year = this.teamCalendarDate.getFullYear();
-      const month = this.teamCalendarDate.getMonth();
+    const year = this.teamCalendarDate.getFullYear();
+    const month = this.teamCalendarDate.getMonth();
+    this.updateMonthLabel();
+    
+    const firstDay = new Date(year, month, 1).getDay(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    this.calendarDays = [];
+    for (let i = 0; i < firstDay; i++) { 
+        this.calendarDays.push({ date: null, leaves: [] }); 
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        
+        // Filter team leaves including HOLIDAYS
+        const dayLeaves = this.teamLeaves.filter(l => {
+            return l.attendanceDate === dateKey && l.status !== 'PRESENT';
+        }); 
+
+        this.calendarDays.push({ date: day, fullDate: dateKey, leaves: dayLeaves });
+    }
+}
+
+  checkIfToday(day: number, month: number, year: number): boolean {
+    const today = new Date();
+    return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+  }
+
+  updateMonthLabel() {
       this.teamCalendarMonthLabel = this.teamCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-      
-      const teamLeaves = this.service.getTeamLeavesForMonth(this.currentManagerId, year, month);
-      
-      const firstDay = new Date(year, month, 1).getDay(); 
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+  }
 
-      this.calendarDays = [];
-      
-      // Empty Cells
-      for (let i = 0; i < firstDay; i++) { 
-          this.calendarDays.push({ date: null, leaves: [] }); 
-      }
-
-      // Actual Days
-      for (let day = 1; day <= daysInMonth; day++) {
-          const dateKey = `${year}-${month + 1 < 10 ? '0'+(month+1) : month+1}-${day < 10 ? '0'+day : day}`;
-          
-          const dayLeaves = teamLeaves
-            .filter(l => l.date === dateKey)
-            .map(l => ({ name: l.employeeName.split(' ')[0], type: l.type })); // Show First Name Only
-
-          this.calendarDays.push({ date: day, fullDate: dateKey, leaves: dayLeaves });
-      }
+  normalizeDate(date: any): string {
+    if (Array.isArray(date)) {
+      return `${date[0]}-${date[1].toString().padStart(2, '0')}-${date[2].toString().padStart(2, '0')}`;
+    }
+    return date;
   }
 
   // ==========================================
-  // 7. NAVIGATION & ACTIONS
+  // 3. ACTIONS & NAVIGATION
   // ==========================================
+
   switchTab(tab: string) {
     this.activeTab = tab;
     this.selectedEmployee = null;
@@ -157,80 +175,98 @@ export class MyTeamComponent implements OnInit {
   
   viewAttendance(employee: any) {
     this.selectedEmployee = employee;
-    this.refreshStats();
+  }
+  
+  viewAttendanceByName(firstName: string) {
+     const emp = this.myTeam.find(e => e.firstName === firstName || e.name?.startsWith(firstName));
+     if(emp) this.viewAttendance(emp);
   }
 
-  viewAttendanceByName(firstName: string) {
-      // Helper to find employee when clicking a name on the calendar
-      const emp = this.myTeam.find(e => e.firstName === firstName || e.name.startsWith(firstName));
-      if(emp) this.viewAttendance(emp);
+  // Add this method to your existing MyTeamComponent class
+  openManagerEdit(employee: any) {
+      // 1. Ask for Date
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dateInput = prompt(`Enter date for ${employee.firstName} (YYYY-MM-DD):`, todayStr);
+      
+      if (dateInput == null || dateInput === "") return; // User cancelled
+
+      // 2. Ask for Status
+      const statusInput = prompt(`Enter status for ${employee.firstName} on ${dateInput}:\n(LEAVE, HALF_DAY, HOLIDAY, PRESENT)`, "LEAVE");
+      
+      if (statusInput == null || statusInput === "") return; // User cancelled
+
+      const finalStatus = statusInput.toUpperCase().trim().replace(' ', '_');
+
+      // 3. Call Service
+      this.service.updateEmployeeAttendance(employee.employeeId, dateInput, finalStatus).subscribe({
+          next: () => {
+              alert(`Successfully updated attendance for ${employee.firstName} on ${dateInput}`);
+              this.loadData(); // Refresh calendar and lists
+          },
+          error: (err) => {
+              alert(err.error?.message || "Error updating attendance. Ensure date format is YYYY-MM-DD.");
+          }
+      });
   }
 
   // ==========================================
-  // 8. CSV REPORTING
+  // 4. REPORTING
   // ==========================================
   downloadTeamReport() {
-    const year = this.teamCalendarDate.getFullYear();
-    const month = this.teamCalendarDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const allLeaves = this.service.getTeamLeavesForMonth(this.currentManagerId, year, month);
-    const employees = this.service.getEmployees(); 
+    const month = this.reportMonth;
+    const year = this.reportYear;
+    const token = localStorage.getItem('token'); // Retrieve your saved token
 
-    let csvRows = [];
-    let maxLeavesInADay = 0;
+    const url = `http://localhost:9988/api/reports/manager/download?month=${month}&year=${year}`;
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateKey = `${year}-${month + 1 < 10 ? '0'+(month+1) : month+1}-${day < 10 ? '0'+day : day}`;
-        const dailyLeaves = allLeaves.filter(l => l.date === dateKey);
-        
-        if (dailyLeaves.length > maxLeavesInADay) maxLeavesInADay = dailyLeaves.length;
-
-        let row = [dateKey];
-        dailyLeaves.forEach(leave => {
-            const empDetails = employees.find(e => e.name === leave.employeeName);
-            const empCode = empDetails ? empDetails.empCode : 'N/A';
-            row.push(`"${leave.employeeName} (${empCode}) - ${leave.type}"`); 
-        });
-        csvRows.push(row);
-    }
-    
-    // Dynamic Header
-    let header = ["Date"];
-    for(let i=1; i <= maxLeavesInADay; i++) header.push(`Employee ${i}`);
-    
-    const csvContent = [header.join(','), ...csvRows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Team_Leave_Report_${this.teamCalendarMonthLabel}.csv`;
-    a.click();
+    this.http.get(url, {
+        responseType: 'blob',
+        observe: 'response',
+        headers: {
+            'Authorization': `Bearer ${token}` // Manually inject the token
+        }
+    }).subscribe({
+        next: (response) => {
+            // Check if body is null
+            if (!response.body) {
+                alert("The report is empty.");
+                return;
+            }
+            const blob = new Blob([response.body], { type: 'text/csv' });
+            const downloadURL = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadURL;
+            link.download = `Team_Report_${month}_${year}.csv`;
+            link.click();
+            window.URL.revokeObjectURL(downloadURL);
+        },
+        error: (err) => {
+            console.error("Download failed", err);
+            // Enhanced error message
+            if (err.status === 403) {
+                alert("Security Error (403): Your session may have expired or you lack MANAGER permissions.");
+            } else {
+                alert("Download failed. Please check your connection.");
+            }
+        }
+    });
   }
 
-  // ==========================================
-  // 9. HELPERS
-  // ==========================================
-  updateMonthLabel() {
-    this.statsMonthLabel = this.statsDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  }
-
-  refreshStats() {
-    if (!this.selectedEmployee) return;
-    const year = this.statsDate.getFullYear();
-    const month = this.statsDate.getMonth();
-    this.attendanceStats = this.service.getMonthlyStats(this.selectedEmployee.name, year, month);
-  }
-
-  // Inside MyTeamComponent class
   sendReportToEmail() {
-      const userEmail = this.service.getCurrentUserEmail(); // You need to implement this in service
-      if (userEmail) {
-          // Logic to trigger backend email service
-          alert(`Report for ${this.teamCalendarMonthLabel} has been sent to ${userEmail}.`);
-      } else {
-          alert('Could not find your email address.');
-      }
+    if (!confirm("Email team attendance report?")) return;
+  
+    this.service.emailManagerReport(
+        this.reportMonth,
+        this.reportYear
+    ).subscribe({
+        next: () => {
+          alert("Report emailed successfully");
+        },
+        error: (err) => {
+          console.error(err);
+          alert("Email could not be delivered to the recipient domain.");
+        }
+    });
   }
+  
 }

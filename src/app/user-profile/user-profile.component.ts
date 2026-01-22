@@ -8,97 +8,86 @@ import { AttendanceService } from '../services/attendance.service';
 })
 export class UserProfileComponent implements OnInit {
 
+  // 1. DATA FOR VIEW
+  userProfile: any = {};
+  history: any[] = [];
+
+  // 2. DATA FOR FORM
   leaveData = {
-    type: '',
-    singleDate: '',
-    fromDate: '',
-    toDate: '',
-    reason: ''
+      type: 'LEAVE', // Default
+      date: '',
+      reason: ''
   };
 
-  myRequests: any[] = [];
-
-  constructor(private attendanceService: AttendanceService) { }
+  constructor(private service: AttendanceService) { }
 
   ngOnInit() {
-    this.loadRequests();
-  }
-
-  submitLeave() {
-    if (!this.leaveData.type) {
-      alert("Please select a Leave Type first.");
-      return;
-    }
-
-    // MOCK USER: In a real app, getting this from your login service
-    const currentUser = 'Dakota Rice'; 
-
-    // CASE 1: Single Date (Half Day / Optional)
-    if (this.leaveData.type !== 'Full Day') {
-      if (!this.leaveData.singleDate) {
-        alert("Please select a date.");
-        return;
-      }
-      
-      // FIX: Use 'this.leaveData.singleDate' here, NOT 'dateString'
-      this.attendanceService.applyLeave(
-          this.leaveData.singleDate, 
-          this.leaveData.type, 
-          this.leaveData.reason,
-          currentUser
-      );
-    } 
+    this.loadProfile();
+    this.loadHistory();
     
-    // CASE 2: Date Range (Full Day)
-    else {
-      if (!this.leaveData.fromDate || !this.leaveData.toDate) {
-        alert("Please select both From and To dates.");
-        return;
-      }
-
-      const start = new Date(this.leaveData.fromDate);
-      const end = new Date(this.leaveData.toDate);
-
-      if (start > end) {
-        alert("'To Date' cannot be before 'From Date'");
-        return;
-      }
-
-      // Loop through dates
-      for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-        // Definition of dateString is ONLY valid inside this loop
-        const dateString = dt.toISOString().split('T')[0];
-        
-        this.attendanceService.applyLeave(
-            dateString, 
-            'Full Day', 
-            this.leaveData.reason,
-            currentUser
-        );
-      }
-    }
-
-    // Reset Form
-    this.leaveData = { type: '', singleDate: '', fromDate: '', toDate: '', reason: '' };
-    alert("Leave Applied (Auto-Approved)!");
-    this.loadRequests();
-  }
-
-  withdraw(dateKey: string) {
-    if(confirm("Withdraw request for " + dateKey + "?")) {
-      this.attendanceService.withdrawLeave(dateKey);
-      this.loadRequests();
-    }
-  }
-
-  loadRequests() {
-    const allData = this.attendanceService.getAllRequests();
-    // Sort by date so they appear in order
-    this.myRequests = Object.keys(allData).sort().map(key => {
-      return {
-        date: key,
-        ...allData[key]
-      };
+    // Auto-refresh when data changes
+    this.service.dataChanged$.subscribe(() => {
+        this.loadHistory();
     });
+  }
+
+  loadProfile() {
+      this.service.getProfile().subscribe(data => this.userProfile = data);
+  }
+
+  loadHistory() {
+      // Fetch and Sort History by Date (Newest First)
+      this.service.getMyLeaves().subscribe(data => {
+          this.history = data.sort((a, b) => 
+              new Date(b.attendanceDate).getTime() - new Date(a.attendanceDate).getTime()
+          );
+      });
+  }
+
+  // 3. APPLY LEAVE (Single Day to match Backend)
+  submitLeave() {
+      if(!this.leaveData.date || !this.leaveData.reason) {
+          alert("Please select a date and enter a reason.");
+          return;
+      }
+
+      // Backend expects: LEAVE, HALF_DAY, etc.
+      this.service.applyLeave(
+          this.leaveData.date, 
+          this.leaveData.type, 
+          this.leaveData.reason
+      );
+
+      alert("Leave applied successfully!");
+      
+      // Reset Form
+      this.leaveData = { type: 'LEAVE', date: '', reason: '' };
+  }
+
+  // 4. ACTIONS
+  downloadMyReport() {
+      const csvContent = "Date,Status,Reason\n" + 
+          this.history.map(e => `${e.attendanceDate},${e.status},${e.reason || '-'}`).join("\n");
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'My_Attendance_History.csv';
+      a.click();
+  }
+
+  withdraw(leave: any) {
+      if(confirm('Withdraw this leave?')) {
+          this.service.resetAttendance(leave.attendanceDate).subscribe(() => {
+              alert('Withdrawn');
+              this.loadHistory();
+          });
+      }
+  }
+
+  // Helper to check if leave is in the future
+  canWithdraw(dateStr: string): boolean {
+      return new Date(dateStr) > new Date();
   }
 }

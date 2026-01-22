@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BrowserModule } from '@angular/platform-browser';
-import { Routes, RouterModule } from '@angular/router';
+import { Routes, RouterModule } from '@angular/router'; // Remove BrowserModule
 
 import { AuthGuard } from './guards/auth.guard';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout.component';
@@ -39,12 +38,13 @@ const routes: Routes = [
 @NgModule({
   imports: [
     CommonModule,
-    BrowserModule,
+    // FIX 1: Removed BrowserModule (It belongs in app.module.ts only)
     RouterModule.forRoot(routes, {
        useHash: true // Keeps URL stable on refresh
     })
   ],
   exports: [
+    RouterModule // <--- FIX 2: REQUIRED to use <router-outlet> in AppComponent
   ],
 })
 export class AppRoutingModule { }

@@ -4,35 +4,50 @@ import { AttendanceService } from '../../services/attendance.service';
 
 declare const $: any;
 
-export interface RouteInfo {
+declare interface RouteInfo {
     path: string;
     title: string;
     icon: string;
     class: string;
+    roles: string[];
 }
 
-// 1. Employee Routes (View: Employee)
-export const ROUTES_EMPLOYEE: RouteInfo[] = [
-    { path: '/dashboard', title: 'Dashboard', icon: 'dashboard', class: '' }
-];
-
-// 2. Manager Routes (View: Manager)
-export const ROUTES_MANAGER: RouteInfo[] = [
-    { path: '/dashboard', title: 'Dashboard', icon: 'dashboard', class: '' },
-    { path: '/my-team', title: 'My Team', icon: 'people', class: '' }
-];
-
-// 3. Admin Routes (View: Admin)
-export const ROUTES_ADMIN: RouteInfo[] = [
-    { path: '/admin-users', title: 'Users', icon: 'person', class: '' },
-    { path: '/admin-view', title: 'Admin View', icon: 'bar_chart', class: '' }
-];
-
-// 4. Master List (Used by Navbar to match Titles)
 export const ROUTES: RouteInfo[] = [
-    ...ROUTES_EMPLOYEE,
-    ...ROUTES_MANAGER,
-    ...ROUTES_ADMIN
+    // ---------------- ADMIN LINKS ----------------
+    { 
+        path: '/admin-users', 
+        title: 'Manage Users',  
+        icon: 'people_alt', 
+        class: '',
+        roles: ['ADMIN']
+    },
+    { 
+        path: '/admin-view', 
+        title: 'View Employees',  
+        icon: 'content_paste', 
+        class: '',
+        roles: ['ADMIN']
+    },
+
+    // ---------------- MANAGER LINKS ----------------
+    { 
+        path: '/my-team', 
+        title: 'My Team',  
+        icon: 'groups', 
+        class: '',
+        roles: ['MANAGER']
+    },
+
+    // ---------------- DASHBOARD (Employee & Manager) ----------------
+    { 
+        path: '/dashboard', 
+        title: 'Dashboard',  
+        icon: 'dashboard', 
+        class: '',
+        roles: ['EMPLOYEE', 'MANAGER'] 
+    }
+    
+    // "Edit Calendar" and "User Profile" removed as requested.
 ];
 
 @Component({
@@ -41,40 +56,34 @@ export const ROUTES: RouteInfo[] = [
   styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent implements OnInit {
-  menuItems: any[];
   
-  constructor(private router: Router, private service: AttendanceService) { }
+  menuItems: any[];
+  userRole: string = 'EMPLOYEE';
+
+  constructor(
+      private service: AttendanceService,
+      private router: Router
+  ) { }
 
   ngOnInit() {
-    const userRole = localStorage.getItem('role') || 'EMPLOYEE';
+    const user = this.service.getLoggedUser();
+    this.userRole = user.role || 'EMPLOYEE';
+    this.filterMenu();
 
-    if (userRole === 'ADMIN') {
-        // Default admin view
-        this.menuItems = ROUTES_ADMIN;
-        // SCENARIO A: User is Admin
-        // We subscribe to the service to switch menus dynamically 
-        // based on which top-bar button they clicked.
-        this.service.viewRole$.subscribe(viewRole => {
-            if (viewRole === 'ADMIN') {
-                this.menuItems = ROUTES_ADMIN.filter(menuItem => menuItem);
-            } else if (viewRole === 'MANAGER') {
-                this.menuItems = ROUTES_MANAGER.filter(menuItem => menuItem);
-            } else {
-                // Default to Employee View
-                this.menuItems = ROUTES_EMPLOYEE.filter(menuItem => menuItem);
-            }
-        });
-    } else {
-        // SCENARIO B: User is NOT Admin (Standard Behavior)
-        // They only see the menu assigned to their actual role.
-        if (userRole === 'MANAGER') {
-            this.menuItems = ROUTES_MANAGER.filter(menuItem => menuItem);
-        } else {
-            this.menuItems = ROUTES_EMPLOYEE.filter(menuItem => menuItem);
-        }
-    }
+    // Subscribe to Role Changes
+    this.service.viewRole$.subscribe(role => {
+        this.userRole = role || 'EMPLOYEE';
+        this.filterMenu();
+    });
   }
-  
+
+  filterMenu() {
+      // Filter routes where the current userRole exists in the 'roles' array
+      this.menuItems = ROUTES.filter(menuItem => 
+          menuItem.roles.includes(this.userRole)
+      );
+  }
+
   isMobileMenu() {
       if ($(window).width() > 991) {
           return false;
@@ -83,7 +92,7 @@ export class SidebarComponent implements OnInit {
   }
 
   logout() {
-      localStorage.clear();
-      this.router.navigate(['/login']);
+      this.service.logout(); 
+      this.router.navigate(['/login']); 
   }
 }

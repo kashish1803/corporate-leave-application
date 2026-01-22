@@ -8,6 +8,7 @@
                 <h4 class="card-title">Login</h4>
                 <p class="description text-center">Enter your email to continue</p>
               </div>
+              
               <div class="card-body">
                 <span class="bmd-form-group">
                   <div class="input-group">
@@ -21,15 +22,30 @@
                            class="form-control" 
                            placeholder="Email..." 
                            [(ngModel)]="email" 
-                           name="email">
-                           
+                           (keyup.enter)="login()"
+                           name="email"
+                           autocomplete="email">
                   </div>
                 </span>
+
+                <div *ngIf="errorMessage" class="text-danger text-center mt-3" style="font-weight: 500;">
+                    {{ errorMessage }}
+                </div>
               </div>
+              
               <div class="card-footer justify-content-center">
-                  <button class="btn btn-primary btn-lg" (click)="login()">Login</button>
+                  <button class="btn btn-primary btn-lg" (click)="login()" [disabled]="isLoading">
+                      <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-1"></span>
+                      {{ isLoading ? 'Logging in...' : 'Login' }}
+                  </button>
               </div>
             </div>
+            
+            <div class="text-center text-white mt-3">
+                <small>Admin: admin@test.com</small> | 
+                <small>Mgr: mike@test.com</small>
+            </div>
+
           </div>
         </div>
       </div>

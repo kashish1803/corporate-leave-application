@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../services/auth.service';
+import { AttendanceService } from '../services/attendance.service';
 
 @Component({
   selector: 'app-login',
@@ -10,23 +10,41 @@ import { AuthService } from '../services/auth.service';
 export class LoginComponent {
 
   email: string = '';
+  errorMessage: string = ''; 
+  isLoading: boolean = false;
 
   constructor(
-    private authService: AuthService,
+    private service: AttendanceService, 
     private router: Router
   ) {}
 
   login() {
+    this.errorMessage = '';
+
     if (!this.email) {
-      alert('Please enter your project email');
+      this.errorMessage = 'Please enter your project email.';
       return;
     }
 
-    this.authService.login(this.email).subscribe({
-      next: (res) => {
-        const role = res.role;
+    this.isLoading = true;
 
-        // 🔁 Redirect based on BACKEND role
+    this.service.login(this.email).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        
+        /** * CRITICAL FIX: Save the employeeId to localStorage.
+         * This is the string (e.g., 'EMP001') that links Managers to Employees.
+         * If 'res.employeeId' is missing, ensure your LoginResponse.java DTO includes it.
+         */
+        if (res.employeeId) {
+          localStorage.setItem('employeeId', res.employeeId);
+        } else {
+          console.warn("Backend login response missing employeeId. Manager filtering may fail.");
+        }
+
+        const role = res.role || 'EMPLOYEE';
+
+        // Navigate based on role
         if (role === 'ADMIN') {
           this.router.navigate(['/admin-users']);
         } else if (role === 'MANAGER') {
@@ -36,8 +54,18 @@ export class LoginComponent {
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Login failed');
+        this.isLoading = false;
+        console.error('Login error:', err);
+        
+        if (err.status === 404) {
+            this.errorMessage = 'User not found. Contact Admin.';
+        } else if (err.status === 401 || err.status === 403) {
+            this.errorMessage = 'Access Denied.';
+        } else {
+            this.errorMessage = err.error?.message || 'Login failed. Check server connection.';
+        }
       }
     });
   }
 }
+

@@ -1,0 +1,139 @@
+/* --- 1. COMMON MODAL STYLES (User & Project) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+ 
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(3px);
+    z-index: 2501;
+}
+ 
+.modal-card {
+    position: relative;
+    z-index: 2502;
+    width: 750px;
+    max-width: 95%;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.14);
+    margin-top: 50px;
+    overflow: visible !important; /* CRITICAL for the floating header */
+    border: none;
+}
+ 
+/* Floating Purple Header Logic */
+.card-header-primary {
+    background: linear-gradient(60deg, #ab47bc, #8e24aa);
+    box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 0 7px 10px -5px rgba(156, 39, 176, 0.4);
+    border-radius: 3px;
+    padding: 15px;
+    margin-top: -30px; /* Pulls header out of the box */
+    margin-left: 20px;
+    margin-right: 20px;
+    position: relative;
+    z-index: 3;
+    color: #fff;
+}
+ 
+.modal-card .card-body {
+    padding: 40px 25px 15px 25px; /* Extra top padding for the overlap */
+}
+ 
+/* --- 2. ATTENDANCE POPUP STYLES --- */
+.attendance-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+ 
+.attendance-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 2001;
+}
+ 
+.attendance-modal-card {
+    position: relative;
+    z-index: 2002;
+    width: 95%;
+    max-width: 1150px;
+    /* We use max-height instead of a fixed height so it fits small screens */
+    max-height: 90vh;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    /* Card itself must be visible for the header to pop out */
+    overflow: visible !important;
+    background: white;
+    border: none;
+    border-radius: 6px;
+}
+ 
+.attendance-modal-card .card-body {
+    /* This is where the scrollbar should live */
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding: 30px 20px 20px 20px;
+    flex: 1;
+    /* Set a specific max-height for the body to force the scrollbar */
+    max-height: calc(90vh - 120px);
+}
+ 
+/* Fix for the dropdown menus inside the scrollable body */
+.calendar-popup-container {
+    background: white;
+    border-radius: 8px;
+    /* Keep this visible so the 3-dots menu isn't clipped by its own container */
+    overflow: visible !important;
+    padding-bottom: 50px; /* Extra space at bottom so menu has room to open */
+}
+ 
+/* Custom Scrollbar for better aesthetics */
+.attendance-modal-card .card-body::-webkit-scrollbar {
+    width: 8px;
+}
+.attendance-modal-card .card-body::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+ 
+/* --- 3. OVERLAYS & DROPDOWNS --- */
+::ng-deep .cdk-overlay-container {
+    z-index: 4000 !important; /* Highest layer for Mat-Menu */
+}
+ 
+::ng-deep app-calendar {
+    display: block;
+    overflow: visible !important;
+}
+ 
+.card-header-info .btn-white {
+    color: #00bcd4 !important;
+    background-color: white !important;
+    font-weight: bold;
+}

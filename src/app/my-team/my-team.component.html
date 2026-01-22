@@ -10,12 +10,18 @@
                             <ul class="nav nav-tabs" data-tabs="tabs">
                                 <li class="nav-item">
                                     <a class="nav-link tab-purple" [class.active]="activeTab === 'calendar'" (click)="switchTab('calendar')" href="javascript:void(0)">
-                                        <i class="material-icons">calendar_month</i> Team Leave Calendar
+                                        <span class="d-flex align-items-center justify-content-center">
+                                            <i class="material-icons mr-2">calendar_month</i> 
+                                            <span class="tab-text">Team Leave Calendar</span>
+                                        </span>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link tab-green" [class.active]="activeTab === 'team'" (click)="switchTab('team')" href="javascript:void(0)">
-                                        <i class="material-icons">people</i> View Team
+                                        <span class="d-flex align-items-center justify-content-center">
+                                            <i class="material-icons mr-2">people</i> 
+                                            <span class="tab-text">View Team List</span>
+                                        </span>
                                     </a>
                                 </li>
                             </ul>
@@ -27,34 +33,46 @@
     </div>
 
     <div class="row">
-      
       <div class="col-md-12" *ngIf="activeTab === 'calendar' && !selectedEmployee">
           <div class="card">
               <div class="card-header card-header-primary">
                   <h4 class="card-title">Monthly Leave Overview</h4>
-                  <p class="card-category">Track who is absent this month</p>
+                  <p class="card-category">Track absences and manage reports</p>
               </div>
               <div class="card-body">
-                  <div class="row mb-3 align-items-center">
-                      <div class="col-md-6 text-left">
+                  <div class="row mb-4 align-items-center report-container">
+                      <div class="col-md-3">
+                          <mat-form-field class="w-100">
+                              <mat-label>Report Month</mat-label>
+                              <mat-select [(ngModel)]="reportMonth">
+                                  <mat-option *ngFor="let m of months" [value]="m.val">{{ m.name }}</mat-option>
+                              </mat-select>
+                          </mat-form-field>
+                      </div>
+                      <div class="col-md-2">
+                          <mat-form-field class="w-100">
+                              <mat-label>Year</mat-label>
+                              <input matInput type="number" [(ngModel)]="reportYear">
+                          </mat-form-field>
+                      </div>
+                      <div class="col-md-7">
                         <button class="btn btn-primary btn-sm mr-2" (click)="downloadTeamReport()">
-                            <i class="material-icons">cloud_download</i> CSV Report
+                            <i class="material-icons">cloud_download</i> Download Report
                         </button>
-                        
                         <button class="btn btn-info btn-sm" (click)="sendReportToEmail()">
-                            <i class="material-icons">email</i> Send Report
+                            <i class="material-icons">email</i> Email Report
                         </button>
                       </div>
-                      
-                      <div class="col-md-6 text-right">
-                          <div class="d-inline-flex align-items-center" style="background: #eee; padding: 5px 15px; border-radius: 20px;">
-                              <button class="btn btn-link btn-sm btn-primary p-0" (click)="changeTeamCalendarMonth(-1)" style="min-width: 30px;">
+                  </div>
+
+                  <div class="row mb-3 align-items-center">
+                      <div class="col-md-12 text-center">
+                          <div class="calendar-nav-wrapper">
+                              <button class="btn btn-link btn-sm btn-primary p-0" (click)="changeTeamCalendarMonth(-1)">
                                   <i class="material-icons">chevron_left</i>
                               </button>
-                              <span class="mx-3 font-weight-bold text-dark" style="font-size: 1.1em; min-width: 120px; text-align: center; display: inline-block;">
-                                  {{ teamCalendarMonthLabel }}
-                              </span>
-                              <button class="btn btn-link btn-sm btn-primary p-0" (click)="changeTeamCalendarMonth(1)" style="min-width: 30px;">
+                              <span class="month-label">{{ teamCalendarDate | date:'MMMM yyyy' }}</span>
+                              <button class="btn btn-link btn-sm btn-primary p-0" (click)="changeTeamCalendarMonth(1)">
                                   <i class="material-icons">chevron_right</i>
                               </button>
                           </div>
@@ -63,14 +81,19 @@
 
                   <div class="team-calendar-grid">
                       <div class="calendar-header purple-header" *ngFor="let day of weekDays">{{ day }}</div>
-                      
-                      <div class="calendar-cell" *ngFor="let day of calendarDays" [ngClass]="{'empty-cell': !day.date}">
+                      <div class="calendar-cell" *ngFor="let day of calendarDays" 
+                            [ngClass]="{'empty-cell': !day.date, 'has-leaves': day.leaves && day.leaves.length > 0}">
                           <div class="date-number" *ngIf="day.date">{{ day.date }}</div>
                           <div class="leave-list" *ngIf="day.date">
-                              <div *ngFor="let leave of day.leaves" class="badge badge-warning mb-1 w-100 text-left" 
-                                   style="white-space: normal; font-size: 11px; padding: 4px; cursor: pointer;"
+                              <div *ngFor="let leave of day.leaves" 
+                                   class="badge mb-1 w-100 text-left leave-item" 
+                                   [ngClass]="{
+                                      'status-leave': leave.status === 'LEAVE',
+                                      'status-halfday': leave.status === 'HALF_DAY',
+                                      'status-holiday': leave.status === 'HOLIDAY'
+                                   }"
                                    (click)="viewAttendanceByName(leave.name)">
-                                  {{ leave.name }} ({{ leave.type }})
+                                  {{ leave.name }} ({{ leave.status }})
                               </div>
                           </div>
                       </div>
@@ -78,12 +101,12 @@
               </div>
           </div>
       </div>
-
+      
       <div class="col-md-12" *ngIf="activeTab === 'team' && !selectedEmployee">
         <div class="card">
             <div class="card-header card-header-success">
                 <h4 class="card-title">My Team Details</h4>
-                <p class="card-category">Manage employee profiles and view attendance</p>
+                <p class="card-category">View employee profiles and manage history</p>
             </div>
             <div class="card-body table-responsive">
                 <table class="table table-hover">
@@ -91,19 +114,19 @@
                         <th>Emp ID</th>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Actions</th>
+                        <th class="text-right">Actions</th>
                     </thead>
                     <tbody>
                         <tr *ngFor="let emp of myTeam">
-                            <td>{{ emp.empCode }}</td>
-                            <td>{{ emp.name }}</td>
-                            <td>{{ emp.email }}</td>
-                            <td class="td-actions">
-                                <button mat-raised-button type="button" class="btn btn-success btn-link btn-sm" (click)="viewAttendance(emp)" matTooltip="View Attendance">
+                            <td>{{ emp.employeeId }}</td>
+                            <td>{{ emp.firstName }} {{ emp.lastName }}</td>
+                            <td>{{ emp.projectEmailId || emp.email }}</td>
+                            <td class="td-actions text-right">
+                                <button mat-raised-button type="button" 
+                                        class="btn btn-info btn-link btn-sm"
+                                        (click)="viewAttendance(emp)"
+                                        matTooltip="View and Edit History">
                                     <i class="material-icons">visibility</i>
-                                </button>
-                                <button mat-raised-button type="button" class="btn btn-success btn-link btn-sm" (click)="openEditEmployee(emp)" matTooltip="Edit Profile">
-                                    <i class="material-icons">edit</i>
                                 </button>
                             </td>
                         </tr>
@@ -114,137 +137,54 @@
       </div>
       
       <div class="col-md-12" *ngIf="selectedEmployee">
-          <button class="btn btn-sm btn-default mb-3" (click)="closeView()"><i class="material-icons">arrow_back</i> Back</button>
-          <app-calendar [targetEmployee]="selectedEmployee.name"></app-calendar>
+          <button class="btn btn-sm btn-default mb-3" (click)="closeView()">
+            <i class="material-icons">arrow_back</i> Back to Team
+          </button>
+          <div class="card">
+              <div class="card-header card-header-info">
+                  <h4 class="card-title">Attendance Details: {{ selectedEmployee.firstName }} {{ selectedEmployee.lastName }}</h4>
+              </div>
+              <div class="card-body">
+                   <app-calendar [targetEmployee]="selectedEmployee.employeeId"></app-calendar>
+              </div>
+          </div>
       </div>
-
-      <div class="modal-overlay" *ngIf="showEditEmployeeModal">
-           <div class="card modal-card">
-               <div class="card-header card-header-success">
-                   <h4 class="card-title">Edit Employee</h4>
-                   <p class="card-category">Update details for {{ editEmployeeData.name }}</p>
-               </div>
-               <div class="card-body" style="padding: 20px;">
-                   <form>
-                       <div class="row">
-                           <div class="col-md-6">
-                               <mat-form-field class="w-100">
-                                   <input matInput placeholder="Name" [value]="editEmployeeData.name" disabled>
-                               </mat-form-field>
-                           </div>
-                           <div class="col-md-6">
-                               <mat-form-field class="w-100">
-                                   <input matInput placeholder="Emp Code" [value]="editEmployeeData.empCode" disabled>
-                               </mat-form-field>
-                           </div>
-                       </div>
-                       
-                       <div class="row mt-3">
-                           <div class="col-md-6">
-                               <mat-form-field class="w-100">
-                                   <mat-select placeholder="Assign Project" [(ngModel)]="editEmployeeData.projectId" name="proj" panelClass="modal-select-panel">
-                                           <mat-option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</mat-option>
-                                   </mat-select>
-                               </mat-form-field>
-                           </div>
-                           <div class="col-md-6">
-                               <mat-form-field class="w-100">
-                                   <mat-label>Assign Manager</mat-label>
-                                   <mat-select [(ngModel)]="editEmployeeData.managerId" name="mgr" panelClass="modal-select-panel">
-                                           <mat-option *ngFor="let m of managers" [value]="m.id">{{ m.name }}</mat-option>
-                                   </mat-select>
-                                   <mat-hint class="text-danger" *ngIf="editEmployeeData.managerId != currentManagerId">
-                                           Warning: You will lose access to this employee.
-                                   </mat-hint>
-                               </mat-form-field>
-                           </div>
-                       </div>
-                       
-                       <div class="mt-4 text-right">
-                           <button class="btn btn-default btn-sm mr-2" (click)="showEditEmployeeModal = false">Cancel</button>
-                           <button class="btn btn-success btn-sm" (click)="saveEmployeeDetails()">Save Changes</button>
-                       </div>
-                   </form>
-               </div>
-           </div>
-           <div class="modal-backdrop" (click)="showEditEmployeeModal=false"></div>
-       </div>
-
     </div>
   </div>
 </div>
 
 <style>
-/* ==================================
-   1. FIXED TAB VISIBILITY
-   ================================== */
-.nav-tabs .nav-link { 
-    font-weight: 500; 
-    cursor: pointer;
-    border-radius: 3px;
-    margin-right: 5px;
-    transition: all 0.3s;
-    border: 1px solid #ddd;
-    padding: 10px 15px;
-    background: #ffffff !important; /* Force White Background */
-}
-.nav-tabs .nav-link i { vertical-align: middle; margin-right: 5px; }
+/* TABS STYLING */
+.nav-tabs .nav-link { font-weight: 500; cursor: pointer; border-radius: 3px; margin-right: 5px; transition: all 0.3s; border: 1px solid #ddd; padding: 10px 15px; background: #ffffff !important; }
 
-/* --- PURPLE TAB (Calendar) --- */
-.nav-link.tab-purple { color: #9c27b0 !important; }
-.nav-link.tab-purple i { color: #9c27b0 !important; }
-.nav-link.tab-purple:hover { background-color: #f3e5f5 !important; }
+/* Icon Fix */
+.nav-tabs .nav-link i { vertical-align: middle; margin-right: 8px; font-size: 20px; }
 
+/* Active Tab Visibility Fixes */
 .nav-link.tab-purple.active { 
-    color: #fff !important;           
-    background: linear-gradient(60deg, #ab47bc, #8e24aa) !important;   
-    border-color: #9c27b0 !important;
-    box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 
-                0 7px 10px -5px rgba(156, 39, 176, 0.4) !important;
+    color: #ffffff !important; 
+    background: linear-gradient(60deg, #ab47bc, #8e24aa) !important; 
+    box-shadow: 0 4px 20px 0px rgba(0,0,0,0.14), 0 7px 10px -5px rgba(156,39,176,0.4) !important; 
 }
-.nav-link.tab-purple.active i { color: #fff !important; }
-
-/* --- GREEN TAB (View Team) --- */
-.nav-link.tab-green { color: #4caf50 !important; }
-.nav-link.tab-green i { color: #4caf50 !important; }
-.nav-link.tab-green:hover { background-color: #e8f5e9 !important; }
+.nav-link.tab-purple.active i, .nav-link.tab-purple.active .tab-text { color: #ffffff !important; }
 
 .nav-link.tab-green.active { 
-    color: #fff !important;           
-    background: linear-gradient(60deg, #66bb6a, #43a047) !important;   
-    border-color: #4caf50 !important;
-    box-shadow: 0 4px 20px 0px rgba(0, 0, 0, 0.14), 
-                0 7px 10px -5px rgba(76, 175, 80, 0.4) !important;
+    color: #ffffff !important; 
+    background: linear-gradient(60deg, #66bb6a, #43a047) !important; 
+    box-shadow: 0 4px 20px 0px rgba(0,0,0,0.14), 0 7px 10px -5px rgba(76,175,80,0.4) !important; 
 }
-.nav-link.tab-green.active i { color: #fff !important; }
+.nav-link.tab-green.active i, .nav-link.tab-green.active .tab-text { color: #ffffff !important; }
 
+/* Status Colors */
+.status-leave { background-color: #f44336 !important; color: white !important; }
+.status-halfday { background-color: #ff9800 !important; color: white !important; }
+.status-holiday { background-color: #2196f3 !important; color: white !important; }
+.status-present { background-color: #4caf50 !important; color: white !important; }
 
-/* ==================================
-   2. CALENDAR STYLES
-   ================================== */
-.team-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; border: 1px solid #ddd; background: #f9f9f9; }
-
-.calendar-header.purple-header { 
-    background: #f3e5f5; 
-    color: #8e24aa;     
-    font-weight: bold; 
-    text-align: center; 
-    padding: 10px 0; 
-}
-
-.calendar-cell { background: #fff; border: 1px solid #eee; height: 120px; padding: 5px; display: flex; flex-direction: column; }
-.date-number { font-weight: bold; color: #555; margin-bottom: 5px; flex-shrink: 0; }
-.leave-list { flex-grow: 1; overflow-y: auto; padding-right: 2px; }
-.leave-list::-webkit-scrollbar { width: 4px; }
-.leave-list::-webkit-scrollbar-track { background: #f1f1f1; }
-.leave-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-.empty-cell { background: #f5f5f5; }
-
-/* ==================================
-   3. MODAL STYLES
-   ================================== */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1050; display: flex; justify-content: center; align-items: center; }
-.modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1051; }
-.modal-card { position: relative; z-index: 1052; width: 600px; max-width: 95%; background: white; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-::ng-deep .cdk-overlay-container { z-index: 1100 !important; }
+/* General Calendar Styles */
+.calendar-nav-wrapper { background: #fff; padding: 5px 20px; border-radius: 30px; display: inline-flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; }
+.month-label { font-weight: bold; color: #333; font-size: 1.1em; min-width: 160px; text-align: center; }
+.team-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; border: 1px solid #ddd; background: #ddd; border-radius: 4px; overflow: hidden; }
+.calendar-header.purple-header { background: #8e24aa; color: #fff; font-weight: bold; text-align: center; padding: 12px 0; font-size: 0.9em; text-transform: uppercase; }
+.calendar-cell { background: #fff; height: 140px; padding: 8px; display: flex; flex-direction: column; position: relative; }
 </style>

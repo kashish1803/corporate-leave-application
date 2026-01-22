@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { AttendanceService, Employee, Project } from '../services/attendance.service';
-import { TimesheetService } from '../services/timesheet.service'; // <--- Import the new Service
+import { AttendanceService, LeaveRequest, ExtractedAttendance } from '../services/attendance.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -9,93 +8,79 @@ import { TimesheetService } from '../services/timesheet.service'; // <--- Import
 })
 export class DashboardComponent implements OnInit {
 
-  // =============================================
-  // 1. EXISTING DASHBOARD DATA
-  // =============================================
-  userProfile = {
-      name: '',
-      projectId: '',
-      projectName: '',
-      managerName: ''
-  };
+  currentUser: any = null;
+  myLeaves: LeaveRequest[] = []; 
+  calendarTimeline: LeaveRequest[] = []; 
 
-  myLeaves: any[] = [];
-  currentUser: string = 'Dakota Rice'; 
-
-  // =============================================
-  // 2. NEW: TIMESHEET SCANNING VARIABLES
-  // =============================================
   selectedFile: File | null = null;
   isScanning: boolean = false;
   scanMessage: string = '';
+  
+  extractedData: ExtractedAttendance[] = [];
+  showReviewTable: boolean = false;
 
-  constructor(
-      private service: AttendanceService, 
-      private timesheetService: TimesheetService // <--- Inject the Service
-  ) { }
+  constructor(private service: AttendanceService) { }
 
   ngOnInit() {
-    this.loadDashboardData();
-    
-    // Subscribe to data changes to refresh leaves after a scan
+    this.currentUser = this.service.getLoggedUser();
+    this.refreshData();
+
     this.service.dataChanged$.subscribe(() => {
-        this.loadDashboardData();
+      this.refreshData();
     });
   }
 
-  loadDashboardData() {
-    // 1. Load Leaves
-    this.myLeaves = this.service.getFutureLeaves(this.currentUser);
-
-    // 2. Load Profile Info
-    const employees: Employee[] = this.service.getEmployees();
-    const projects: Project[] = this.service.getProjects();
-    const managers: any[] = this.service.getManagers(); 
-    
-    const emp = employees.find(e => e.name === this.currentUser);
-    
-    if(emp) {
-        const proj = projects.find(p => p.id == emp.projectId);
-        const mgr = managers.find(m => m.id == emp.managerId);
-
-        this.userProfile = {
-            name: emp.name,
-            projectId: emp.projectId ? String(emp.projectId) : 'N/A', 
-            projectName: proj ? proj.name : 'Unassigned',
-            managerName: mgr ? mgr.name : 'Unassigned'
-        };
-    }
+  refreshData() {
+    this.loadMyLeaves();
+    this.loadTimeline();
   }
 
-  // =============================================
-  // 3. EXISTING: LEAVE WITHDRAWAL LOGIC
-  // =============================================
-  withdrawLeave(leave: any) {
-    if (this.canWithdraw(leave.date)) {
-        if(confirm(`Are you sure you want to withdraw your leave on ${leave.date}?`)) {
-            this.service.withdrawLeave(leave.date);
-        }
-    } else {
-        alert('Withdrawal is only allowed 15 days in advance.');
-    }
-  }
-
-  canWithdraw(dateStr: string): boolean {
+  loadMyLeaves() {
     const today = new Date();
-    const leaveDate = new Date(dateStr);
-    const diffTime = leaveDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 15;
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    today.setHours(0, 0, 0, 0);
+
+    this.service.getMyLeaves().subscribe(data => {
+      this.myLeaves = (data || [])
+        .filter(l => {
+          // 🚀 FIX: Filter out withdrawn leaves AND weekends
+          const dateStr = this.normalizeDateHelper(l.attendanceDate);
+          const dateObj = new Date(dateStr);
+          const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+          
+          return !l.isWithdrawn && dayOfWeek !== 0 && dayOfWeek !== 6;
+        })
+        .map(l => {
+          const normalizedDate = this.normalizeDateHelper(l.attendanceDate);
+          const leaveDate = new Date(normalizedDate);
+          const isPastDate = new Date(normalizedDate) < today;
+          const isPastMonth = 
+            (leaveDate.getFullYear() < currentYear) || 
+            (leaveDate.getFullYear() === currentYear && leaveDate.getMonth() < currentMonth);
+
+          return {
+            ...l,
+            attendanceDate: normalizedDate,
+            isCompleted: isPastDate,
+            isLocked: isPastMonth 
+          };
+        })
+        .sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate));
+    });
   }
 
-  // =============================================
-  // 4. NEW: TIMESHEET UPLOAD LOGIC
-  // =============================================
-  
+  loadTimeline() {
+    this.service.getMyTimeline().subscribe(data => {
+      this.calendarTimeline = data || [];
+    });
+  }
+
   onFileSelected(event: any) {
     if (event.target.files && event.target.files.length > 0) {
-        this.selectedFile = event.target.files[0];
-        this.scanMessage = ''; // Clear previous messages
+      this.selectedFile = event.target.files[0];
+      this.scanMessage = '';
+      this.showReviewTable = false;
     }
   }
 
@@ -103,24 +88,87 @@ export class DashboardComponent implements OnInit {
     if (!this.selectedFile) return;
 
     this.isScanning = true;
-    this.scanMessage = 'Scanning image with Gemini AI... please wait...';
+    this.scanMessage = 'Gemini AI is analyzing your timesheet...';
+    this.extractedData = [];
 
-    // Call the backend via TimesheetService
-    this.timesheetService.uploadTimesheet(this.selectedFile, this.currentUser)
-      .subscribe(
-        (response: string) => {
-          this.isScanning = false;
-          this.scanMessage = response; // Display success message from Backend
-          this.selectedFile = null;    // Reset file input
-          
-          // Refresh data so the new leaves appear in the list immediately
-          this.service.dataChanged$.next(true);
-        },
-        (error: any) => {
-          this.isScanning = false;
-          console.error(error);
-          this.scanMessage = 'Error: ' + (error.error || 'Failed to connect to server.');
-        }
-      );
+    this.service.uploadTimesheet(this.selectedFile).subscribe({
+      next: (data) => {
+        // 🚀 OPTIONAL: You can filter weekends here too if the AI identifies them
+        this.extractedData = data.filter(item => {
+          const d = new Date(item.date);
+          return d.getDay() !== 0 && d.getDay() !== 6;
+        });
+        
+        this.isScanning = false;
+        this.showReviewTable = true;
+        this.scanMessage = `Analysis complete! Found ${this.extractedData.length} weekday records.`;
+      },
+      error: (err) => {
+        this.isScanning = false;
+        this.scanMessage = 'Error: Could not process timesheet.';
+        console.error(err);
+      }
+    });
+  }
+
+  
+  saveExtractedData() {
+    this.service.saveBulkAttendance(this.extractedData).subscribe({
+      next: (res) => {
+        this.scanMessage = 'Database Sync Successful!';
+        this.showReviewTable = false;
+        this.selectedFile = null;
+        this.service.dataChanged$.next(true); 
+      },
+      error: (err) => {
+        this.scanMessage = 'Sync failed. Check console.';
+      }
+    });
+  }
+
+  getAttendanceClass(dateInput: any): string {
+    const dateKey = this.normalizeDateHelper(dateInput);
+    
+    // 🚀 FIX: Prevent weekend dates from being colored on the calendar
+    const dateObj = new Date(dateKey);
+    const dayOfWeek = dateObj.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return 'bg-weekend'; // Use a specific weekend class or bg-default
+    }
+
+    const record = this.calendarTimeline.find(t => {
+        const rDate = this.normalizeDateHelper(t.attendanceDate);
+        return rDate === dateKey && (t.isWithdrawn === false || t.isWithdrawn === undefined);
+    });
+    
+    if (!record) return 'bg-default';
+
+    switch (record.status) {
+        case 'LEAVE': return 'status-leave';
+        case 'HALF_DAY': return 'status-halfday';
+        case 'HOLIDAY': return 'status-holiday';
+        default: return 'bg-default';
+    }
+  }
+
+  private normalizeDateHelper(dateInput: any): string {
+    if (!dateInput) return '';
+    if (Array.isArray(dateInput)) {
+        return `${dateInput[0]}-${String(dateInput[1]).padStart(2, '0')}-${String(dateInput[2]).padStart(2, '0')}`;
+    }
+    if (typeof dateInput === 'string') {
+        return dateInput.split('T')[0];
+    }
+    return '';
+  }
+
+  withdrawLeave(leave: LeaveRequest) {
+    const dateStr = this.normalizeDateHelper(leave.attendanceDate);
+    if (confirm(`Are you sure you want to cancel your leave for ${dateStr}?`)) {
+      this.service.withdrawLeave(dateStr).subscribe({
+        next: () => this.service.dataChanged$.next(true),
+        error: (err) => alert(err.error?.message || 'Failed to withdraw leave')
+      });
+    }
   }
 }

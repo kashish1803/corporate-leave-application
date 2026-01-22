@@ -8,47 +8,39 @@ import { AttendanceService } from '../../../services/attendance.service';
 })
 export class AdminCalendarComponent implements OnInit {
 
-  // Form Inputs
-  scope: string = 'Global'; // Default
-  targetId: any = null;
-  eventDate: string = '';
-  eventTitle: string = '';
-
-  // Dropdown Data
+  // Data Containers
   managers: any[] = [];
   projects: any[] = [];
+  
+  // FIX: Define this locally since Service no longer has it
+  adminEvents: any[] = []; 
+  
+  // Form Data
+  newEvent: any = { title: '', date: '', scope: 'Global', targetId: null };
 
   constructor(public service: AttendanceService) { }
 
   ngOnInit() {
-    this.managers = this.service.getManagers();
-    this.projects = this.service.getProjects();
+    this.loadData();
   }
 
-  saveEvent() {
-    if(!this.eventDate || !this.eventTitle) {
-        alert('Please enter a Date and Title');
-        return;
-    }
+  loadData() {
+      // FIX: Subscribe to Observables
+      this.service.getManagers().subscribe(data => this.managers = data);
+      this.service.getProjects().subscribe(data => this.projects = data);
+  }
 
-    if(this.scope !== 'Global' && !this.targetId) {
-        alert(`Please select a specific ${this.scope}`);
-        return;
-    }
-
-    const newEvent = {
-        date: this.eventDate,
-        title: this.eventTitle,
-        scope: this.scope,
-        targetId: this.targetId
-    };
-
-    this.service.addAdminEvent(newEvent);
-    
-    // Reset Form
-    alert('Event added successfully!');
-    this.eventDate = '';
-    this.eventTitle = '';
-    this.targetId = null;
+  addEvent() {
+      if(!this.newEvent.title || !this.newEvent.date) {
+          alert('Please fill required fields');
+          return;
+      }
+      
+      // FIX: Push to local array instead of service
+      this.adminEvents.push({ ...this.newEvent });
+      
+      // Clear Form
+      this.newEvent = { title: '', date: '', scope: 'Global', targetId: null };
+      alert("Event Added (Local Only)");
   }
 }

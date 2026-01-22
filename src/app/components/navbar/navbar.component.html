@@ -37,7 +37,7 @@
         <div class="collapse navbar-collapse justify-content-end" id="navigation">
             <ul class="navbar-nav align-items-center">
                 
-                <li class="nav-item dropdown profile-dropdown">
+                <li class="nav-item dropdown profile-dropdown" *ngIf="userProfile && userProfile.name">
                     <a class="nav-link d-flex align-items-center" href="javascript:void(0)" id="navbarDropdownProfile" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <div class="profile-photo-small mr-2">
                            <span>{{ userProfile.name.charAt(0) }}</span>
@@ -62,8 +62,8 @@
                             <div class="d-flex align-items-center mb-2">
                                 <i class="material-icons text-info mr-2" style="font-size: 18px;">work</i>
                                 <div>
-                                    <small class="d-block text-muted line-height-1">Project</small>
-                                    <span class="text-dark font-weight-500" style="font-size: 13px;">{{ userProfile.projectName }}</span>
+                                    <small class="d-block text-muted line-height-1">Project ID</small>
+                                    <span class="text-dark font-weight-500" style="font-size: 13px;">{{ userProfile.projectId }}</span>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
@@ -75,7 +75,14 @@
                             </div>
                         </div>
 
-                        </div>
+                        <div class="dropdown-divider mx-3"></div>
+
+                        <a class="dropdown-item text-danger d-flex align-items-center justify-content-center pb-3 pt-2" 
+                           href="javascript:void(0)" (click)="logout()">
+                            <i class="material-icons mr-2">logout</i> Logout
+                        </a>
+
+                    </div>
                 </li>
             </ul>
         </div>

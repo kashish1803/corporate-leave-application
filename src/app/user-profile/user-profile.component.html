@@ -1,64 +1,114 @@
 <div class="main-content">
   <div class="container-fluid">
+    
     <div class="row">
       
-      <div class="col-md-12">
+      <div class="col-md-4">
+        <div class="card card-profile">
+          <div class="card-avatar">
+            <a href="javascript:void(0)">
+              <img class="img" src="./assets/img/faces/marc.jpg" />
+            </a>
+          </div>
+          <div class="card-body">
+            <h6 class="card-category text-gray">{{ userProfile.role || 'Employee' }}</h6>
+            <h4 class="card-title">{{ userProfile.fullName }}</h4>
+            
+            <div class="text-left mt-3">
+                 <p><strong>Emp ID:</strong> {{ userProfile.employeeId }}</p>
+                 <p><strong>Project:</strong> {{ userProfile.projectId || 'Unassigned' }}</p>
+                 <p><strong>Manager:</strong> {{ userProfile.managerName || 'None' }}</p>
+            </div>
+
+            <button mat-raised-button class="btn btn-primary btn-round" (click)="downloadMyReport()">
+                <i class="material-icons">download</i> Download History
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-8">
         <div class="card">
           <div class="card-header card-header-primary">
             <h4 class="card-title">Apply for Leave</h4>
-            <p class="card-category">Select type first to see date options</p>
+            <p class="card-category">Submit a new leave request</p>
           </div>
           <div class="card-body">
             <form>
-              
               <div class="row">
-                <div class="col-md-12">
-                  <mat-form-field class="example-full-width">
-                    <mat-select placeholder="Select Leave Type" [(ngModel)]="leaveData.type" name="type">
-                      <mat-option value="Full Day">Full Day</mat-option>
-                      <mat-option value="Half Day">Half Day</mat-option>
-                      <mat-option value="Optional Holiday">Optional Holiday</mat-option>
+                <div class="col-md-6">
+                  <mat-form-field class="w-100">
+                    <mat-select placeholder="Leave Type" [(ngModel)]="leaveData.type" name="type">
+                      <mat-option value="LEAVE">Full Day</mat-option>
+                      <mat-option value="HALF_DAY">Half Day</mat-option>
+                      <mat-option value="OPTIONAL_HOLIDAY">Optional Holiday</mat-option>
                     </mat-select>
                   </mat-form-field>
                 </div>
-              </div>
-
-              <div class="row" *ngIf="leaveData.type === 'Full Day'">
                 <div class="col-md-6">
-                  <mat-form-field class="example-full-width">
-                    <input matInput type="date" placeholder="From Date" [(ngModel)]="leaveData.fromDate" name="fromDate">
-                  </mat-form-field>
-                </div>
-                <div class="col-md-6">
-                  <mat-form-field class="example-full-width">
-                    <input matInput type="date" placeholder="To Date" [(ngModel)]="leaveData.toDate" name="toDate">
+                  <mat-form-field class="w-100">
+                    <input matInput type="date" placeholder="Date" [(ngModel)]="leaveData.date" name="date">
                   </mat-form-field>
                 </div>
               </div>
 
-              <div class="row" *ngIf="leaveData.type && leaveData.type !== 'Full Day'">
+              <div class="row mt-2">
                 <div class="col-md-12">
-                  <mat-form-field class="example-full-width">
-                    <input matInput type="date" placeholder="Select Date" [(ngModel)]="leaveData.singleDate" name="singleDate">
-                  </mat-form-field>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-12">
-                  <mat-form-field class="example-full-width">
+                  <mat-form-field class="w-100">
                     <textarea matInput placeholder="Reason" [(ngModel)]="leaveData.reason" name="reason" rows="3"></textarea>
                   </mat-form-field>
                 </div>
               </div>
 
-              <button mat-raised-button type="button" class="btn btn-primary pull-right" (click)="submitLeave()">Submit Application</button>
+              <button mat-raised-button type="button" class="btn btn-primary pull-right" (click)="submitLeave()">
+                  Submit Application
+              </button>
               <div class="clearfix"></div>
             </form>
           </div>
         </div>
       </div>
+    </div>
 
-      </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-warning">
+                    <h4 class="card-title">My Leave History</h4>
+                    <p class="card-category">Past and upcoming leaves</p>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <thead class="text-warning">
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                            <th class="text-right">Action</th>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let leave of history">
+                                <td>{{ leave.attendanceDate }}</td>
+                                <td>{{ leave.status }}</td>
+                                <td>{{ leave.reason || '-' }}</td>
+                                <td class="td-actions text-right">
+                                    <button *ngIf="canWithdraw(leave.attendanceDate)" 
+                                            mat-raised-button 
+                                            class="btn btn-danger btn-link btn-sm" 
+                                            (click)="withdraw(leave)"
+                                            matTooltip="Withdraw">
+                                        <i class="material-icons">close</i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr *ngIf="history.length === 0">
+                                <td colspan="4" class="text-center text-muted">No history found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
   </div>
 </div>

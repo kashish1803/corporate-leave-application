@@ -11,21 +11,21 @@
             <div class="row">
                 <div class="col-md-12 mb-3">
                     <label class="mr-3 text-dark font-weight-bold">Apply To:</label>
-                    <mat-radio-group [(ngModel)]="scope">
+                    <mat-radio-group [(ngModel)]="newEvent.scope">
                         <mat-radio-button value="Global" class="mr-3">Global (All)</mat-radio-button>
                         <mat-radio-button value="Project" class="mr-3">Specific Project</mat-radio-button>
                         <mat-radio-button value="Manager" class="mr-3">Specific Manager</mat-radio-button>
                     </mat-radio-group>
                 </div>
 
-                <div class="col-md-4" *ngIf="scope !== 'Global'">
+                <div class="col-md-4" *ngIf="newEvent.scope !== 'Global'">
                     <mat-form-field class="w-100">
-                        <mat-select [placeholder]="scope === 'Manager' ? 'Select Manager' : 'Select Project'" [(ngModel)]="targetId">
-                            <ng-container *ngIf="scope === 'Manager'">
-                                <mat-option *ngFor="let m of managers" [value]="m.id">{{ m.name }}</mat-option>
+                        <mat-select [placeholder]="newEvent.scope === 'Manager' ? 'Select Manager' : 'Select Project'" [(ngModel)]="newEvent.targetId">
+                            <ng-container *ngIf="newEvent.scope === 'Manager'">
+                                <mat-option *ngFor="let m of managers" [value]="m.employeeId">{{ m.name }}</mat-option>
                             </ng-container>
-                            <ng-container *ngIf="scope === 'Project'">
-                                <mat-option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</mat-option>
+                            <ng-container *ngIf="newEvent.scope === 'Project'">
+                                <mat-option *ngFor="let p of projects" [value]="p.projectId">{{ p.projectName }}</mat-option>
                             </ng-container>
                         </mat-select>
                     </mat-form-field>
@@ -33,17 +33,17 @@
 
                 <div class="col-md-4">
                     <mat-form-field class="w-100">
-                        <input matInput type="date" placeholder="Event Date" [(ngModel)]="eventDate">
+                        <input matInput type="date" placeholder="Event Date" [(ngModel)]="newEvent.date">
                     </mat-form-field>
                 </div>
                 <div class="col-md-4">
                     <mat-form-field class="w-100">
-                        <input matInput placeholder="Event Title (e.g. Diwali)" [(ngModel)]="eventTitle">
+                        <input matInput placeholder="Event Title (e.g. Diwali)" [(ngModel)]="newEvent.title">
                     </mat-form-field>
                 </div>
             </div>
 
-            <button class="btn btn-warning pull-right" (click)="saveEvent()">Add Event to Calendar</button>
+            <button class="btn btn-warning pull-right" (click)="addEvent()">Add Event to Calendar</button>
 
         </div>
     </div>
@@ -53,10 +53,13 @@
         <div class="card-body">
             <table class="table">
                 <th>Date</th><th>Title</th><th>Scope</th>
-                <tr *ngFor="let ev of service.adminEvents">
+                <tr *ngFor="let ev of adminEvents">
                     <td>{{ ev.date }}</td>
                     <td>{{ ev.title }}</td>
                     <td>{{ ev.scope }}</td>
+                </tr>
+                <tr *ngIf="adminEvents.length === 0">
+                    <td colspan="3" class="text-center text-muted">No events added locally yet.</td>
                 </tr>
             </table>
         </div>

@@ -7,8 +7,8 @@ import { Observable } from 'rxjs';
 })
 export class TimesheetService {
 
-  // Ensure this matches your Spring Boot Controller URL
-  private baseUrl = 'http://localhost:8080/api/timesheet';
+  // FIX: Port 9988 (Matches application.properties)
+  private baseUrl = 'http://localhost:9988/api/timesheets';
 
   constructor(private http: HttpClient) { }
 
@@ -17,7 +17,7 @@ export class TimesheetService {
     formData.append('file', file);
     formData.append('employeeName', employeeName);
 
-    // We expect a text response ("Success! Detected...")
+    // Note: The AuthInterceptor will automatically attach the JWT Token here
     return this.http.post(this.baseUrl + '/upload', formData, { responseType: 'text' });
   }
 }

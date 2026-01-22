@@ -1,0 +1,41 @@
+/* --- Global Tab Text Fix --- */
+.nav-link .tab-text, 
+.nav-link i {
+    transition: all 0.3s ease;
+}
+
+/* --- PURPLE TAB (Calendar) --- */
+/* Inactive state */
+.nav-link.tab-purple:not(.active) .tab-text,
+.nav-link.tab-purple:not(.active) i {
+    color: #9c27b0 !important;
+}
+
+/* Active state */
+.nav-link.tab-purple.active {
+    background: linear-gradient(60deg, #ab47bc, #8e24aa) !important;
+    border-color: #9c27b0 !important;
+}
+
+.nav-link.tab-purple.active .tab-text,
+.nav-link.tab-purple.active i {
+    color: #ffffff !important; /* Forces text to show white on purple */
+}
+
+/* --- GREEN TAB (Team List) --- */
+/* Inactive state */
+.nav-link.tab-green:not(.active) .tab-text,
+.nav-link.tab-green:not(.active) i {
+    color: #4caf50 !important;
+}
+
+/* Active state */
+.nav-link.tab-green.active {
+    background: linear-gradient(60deg, #66bb6a, #43a047) !important;
+    border-color: #4caf50 !important;
+}
+
+.nav-link.tab-green.active .tab-text,
+.nav-link.tab-green.active i {
+    color: #ffffff !important; /* Forces text to show white on green */
+}

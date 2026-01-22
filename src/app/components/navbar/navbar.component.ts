@@ -2,7 +2,7 @@ import { Component, OnInit, ElementRef } from '@angular/core';
 import { ROUTES } from '../sidebar/sidebar.component';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
-import { AttendanceService } from '../../services/attendance.service';
+import { AttendanceService, UserProfile } from '../../services/attendance.service';
 
 @Component({
   selector: 'app-navbar',
@@ -20,8 +20,9 @@ export class NavbarComponent implements OnInit {
     isUserAdmin: boolean = false; 
     currentView: string = 'ADMIN'; 
 
+    // Dynamic Profile Data
     userProfile: any = {}; 
-    currentUser: string = 'Dakota Rice';
+    currentUser: string = ''; // Will be loaded from Backend
 
     constructor(
         location: Location, 
@@ -34,15 +35,13 @@ export class NavbarComponent implements OnInit {
     }
 
     ngOnInit() {
-      // 1. Check if the actual logged-in user is Admin
-      const role = localStorage.getItem('role');
+      // 1. Check Role from LocalStorage (Note: Key is 'userRole' in new service)
+      const role = localStorage.getItem('userRole');
       this.isUserAdmin = (role === 'ADMIN');
+      this.currentView = role || 'EMPLOYEE';
 
-      // 2. Initialize Default View
-      if(this.isUserAdmin) {
-          this.currentView = 'ADMIN';
-          this.service.switchToView('ADMIN'); // Sync service
-      }
+      // 2. Initialize Default View via Service
+      this.service.changeViewRole(this.currentView); 
 
       this.listTitles = ROUTES.filter(listTitle => listTitle);
       const navbar: HTMLElement = this.element.nativeElement;
@@ -52,43 +51,56 @@ export class NavbarComponent implements OnInit {
         this.sidebarClose();
         var $layer: any = document.getElementsByClassName('close-layer')[0];
         if ($layer) { $layer.remove(); this.mobile_menu_visible = 0; }
-     });
+      });
 
-     this.loadUserProfile();
+      // 3. Load Profile from Backend
+      this.loadUserProfile();
     }
 
-    // 3. Handle Button Click
+    // ============================================================
+    // 1. VIEW SWITCHING (Admin / Manager / Employee)
+    // ============================================================
     switchView(role: string) {
         this.currentView = role;
-        this.service.switchToView(role); // Tell Sidebar to change
+        this.service.changeViewRole(role); // Updated method name
 
-        // Optional: Redirect to a safe page for that role
+        // Redirect based on role
         if(role === 'EMPLOYEE') this.router.navigate(['/dashboard']);
-        if(role === 'MANAGER') this.router.navigate(['/my-team']);
-        if(role === 'ADMIN') this.router.navigate(['/admin-users']);
+        else if(role === 'MANAGER') this.router.navigate(['/my-team']); // Updated route
+        else if(role === 'ADMIN') this.router.navigate(['/admin-users']);
     }
 
-    // ... (Keep existing loadUserProfile, sidebarOpen, sidebarClose, getTitle methods)
+    // ============================================================
+    // 2. LOAD PROFILE (Optimized /api/users/me call)
+    // ============================================================
     loadUserProfile() {
-        const employees = this.service.getEmployees();
-        const projects = this.service.getProjects();
-        const managers = this.service.getManagers();
+        // Use the dedicated endpoint instead of filtering arrays
+        this.service.getProfile().subscribe({
+            next: (data: UserProfile) => {
+                this.currentUser = data.fullName;
+                this.userProfile = {
+                    name: data.fullName,
+                    empId: data.employeeId,
+                    projectId: data.projectId || 'N/A',
+                    managerName: data.managerName || 'Unassigned'
+                };
+            },
+            error: (err) => {
+                console.error('Failed to load profile', err);
+                // If 403, it means the user token is invalid -> logout
+                if(err.status === 403) this.logout();
+            }
+        });
+    }
 
-        const emp = employees.find(e => e.name === this.currentUser);
-        if (emp) {
-            const proj = projects.find(p => p.id == emp.projectId);
-            const mgr = managers.find(m => m.id == emp.managerId);
-
-            this.userProfile = {
-                name: emp.name,
-                empId: emp.empCode,
-                projectId: emp.projectId ? String(emp.projectId) : 'N/A',
-                projectName: proj ? proj.name : 'Unassigned',
-                managerName: mgr ? mgr.name : 'Unassigned'
-            };
-        }
+    logout() {
+        this.service.logout();
+        this.router.navigate(['/login']);
     }
     
+    // ============================================================
+    // 3. UI HELPERS (Sidebar Toggle)
+    // ============================================================
     sidebarOpen() {
         const toggleButton = this.toggleButton;
         const body = document.getElementsByTagName('body')[0];
@@ -120,6 +132,11 @@ export class NavbarComponent implements OnInit {
       if(titlee.charAt(0) === '#'){
           titlee = titlee.slice( 1 );
       }
+      // Handle query params in URL title matching
+      if(titlee.includes('?')) {
+          titlee = titlee.split('?')[0];
+      }
+
       if(this.listTitles) {
           for(var item = 0; item < this.listTitles.length; item++){
               if(this.listTitles[item].path === titlee){
